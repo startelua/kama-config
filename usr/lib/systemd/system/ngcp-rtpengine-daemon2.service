@@ -7,13 +7,13 @@ Requires=network-online.target
 [Service]
 Type=notify
 #EnvironmentFile=/etc/default/ngcp-rtpengine-daemon
-RuntimeDirectory=rtpengine
+RuntimeDirectory=rtpengine2
 User=rtpengine
 #User=root
 Group=rtpengine
 #Group=root
 LimitNOFILE=150000
-ExecStart=/usr/bin/rtpengine -f --no-log-timestamps --pidfile /run/rtpengine/ngcp-rtpengine-daemon2.pid --config-file /etc/rtpengine/rtpengine2.conf
+ExecStart=/usr/bin/rtpengine -f --no-log-timestamps --pidfile /run/rtpengine2/ngcp-rtpengine-daemon2.pid --config-file /etc/rtpengine/rtpengine2.conf
 # Service cannot create writable executable memory mappings that are writable and executable at the same time
 MemoryDenyWriteExecute=true
 

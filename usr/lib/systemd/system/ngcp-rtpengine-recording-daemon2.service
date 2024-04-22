@@ -10,12 +10,12 @@ Requires=ngcp-rtpengine-recording-nfs-mount.service
 Type=notify
 LimitNOFILE=100000
 RuntimeDirectory=rtpengine-recording
-PIDFile=/run/rtpengine-recording/ngcp-rtpengine-recording-daemon2.pid
+PIDFile=/run/rtpengine-recording2/ngcp-rtpengine-recording-daemon2.pid
 AmbientCapabilities=CAP_NET_ADMIN CAP_CHOWN
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_CHOWN
 User=rtpengine
 Group=rtpengine
-ExecStart=/usr/bin/rtpengine-recording -f  --no-log-timestamps --pidfile /run/rtpengine-recording/ngcp-rtpengine-recording-daemon2.pid --config-file /etc/rtpengine/rtpengine-recording2.conf
+ExecStart=/usr/bin/rtpengine-recording -f  --no-log-timestamps --pidfile /run/rtpengine-recording2/ngcp-rtpengine-recording-daemon2.pid --config-file /etc/rtpengine/rtpengine-recording2.conf
 
 [Install]
 WantedBy=multi-user.target
