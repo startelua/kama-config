@@ -391,9 +391,10 @@ function ksr_onreply_manage_rtpengine()
     if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
         KSR.log("info", "response contains sdp, answer to rtpengine \n")
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
-	local rtp_option="record-call=yes metadata=from:pre"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
 
+	   local rtp_option="record-call=yes metadata=from:pre"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
            rtpengine =  rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
+	KSR.roue("rt_orward")    
         end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
 --	  local rtp_option="record-call=yes metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
