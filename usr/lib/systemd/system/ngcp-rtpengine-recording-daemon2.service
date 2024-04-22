@@ -9,7 +9,7 @@ Requires=ngcp-rtpengine-recording-nfs-mount.service
 [Service]
 Type=notify
 LimitNOFILE=100000
-RuntimeDirectory=rtpengine-recording
+RuntimeDirectory=rtpengine-recording2
 PIDFile=/run/rtpengine-recording2/ngcp-rtpengine-recording-daemon2.pid
 AmbientCapabilities=CAP_NET_ADMIN CAP_CHOWN
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_CHOWN
