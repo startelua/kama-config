@@ -209,8 +209,9 @@ function ksr_route_withindlg(request_method)
 	    KSR.x.drop();
         end
 ]]--	 
-
-	KSR.roue("rt_forward_stop")    
+	KSR.log("err","rt_forward stop and start record 212\n") 
+	KSR.roue("rt_forward_stop")
+	KSR.log("err","rt_forward "..KSR.pvx.var_get("exit").."\n") 
 --       KSR.rtpengine.start_recording()
        ksr_route_natmanage();
 
@@ -393,10 +394,11 @@ function ksr_onreply_manage_rtpengine()
     if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
         KSR.log("info", "response contains sdp, answer to rtpengine \n")
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
-
 	   local rtp_option=" metadata=from:pre"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
            rtpengine =  rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
-	KSR.roue("rt_forward_start")    
+	KSR.log("err","rt_forward start\n") 
+	KSR.roue("rt_forward_start")
+	KSR.log("err","rt_forward "..KSR.pvx.var_get("exit").."\n") 
         end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
 --	  local rtp_option="record-call=yes metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
