@@ -91,7 +91,15 @@ end
 -- OPTIONS Processing sending keepalive 200
 ------------------------------------------
 function ksr_route_options_process(request_method)
-    if request_method == "OPTIONS"
+    --  NAT KEEPALIVE SIP OPTION
+--[[        if KSR.is_OPTIONS() then
+        if KSR.is_myself_ruri() and KSR.corex.has_ruri_user()<0 then
+            KSR.sl.sl_send_reply(200, "Keepalive")
+            KSR.x.exit()
+        end
+        end ]]--
+    -- NAT
+      if request_method == "OPTIONS"
             and KSR.is_myself(KSR.pv.get("$ru"))
             and KSR.pv.is_null("$rU") then
         KSR.log("info", "sending keepalive response 200 \n")
@@ -396,9 +404,17 @@ function ksr_onreply_manage_rtpengine()
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
   	   local rtp_option=" metadata=from:pre"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
            rtpengine =rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
+-- Провепка возможности форвардинга и записи    
+   local sipuser
+    if KSR.hdr.is_present('X-ACCESS-USERID')>0 then
+        sipuser = KSR.hdr.get('X-ACCESS-USERID')
+        -- REMOVE X-HEADER
+        KSR.hdr.remove('X-ACCESS-USERID')
 	KSR.log("err","rt_forward start\n") 
 	KSR.route("rt_forward_start")
         KSR.rtpengine.start_recording()
+    end
+-- конец проверки 
 	KSR.log("err","rt_forward "..KSR.pvx.var_get("exit").."\n") 
         end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
