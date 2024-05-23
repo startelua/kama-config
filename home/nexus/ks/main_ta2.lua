@@ -405,10 +405,10 @@ function ksr_onreply_manage_rtpengine()
   	   local rtp_option=" metadata=from:pre"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
            rtpengine =rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
 -- Провепка возможности форвардинга и записи    
-   local sipuser
     if KSR.hdr.is_present('X_ao')>0 then
+	KSR.log("info", "X_ao recive_forward on  \n")
         if KSR.hdr.get('X_ao')>0 then
-		        KSR.log("info", "recive_forward on  \n")
+		        KSR.log("info", " X_ao >0 recive_forward  "..KSR.hdr.get('X_ao').."\n")
 		KSR.route("rt_forward_start")
 	end
         -- REMOVE X-HEADER
