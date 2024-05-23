@@ -406,14 +406,18 @@ function ksr_onreply_manage_rtpengine()
            rtpengine =rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
 -- Провепка возможности форвардинга и записи    
    local sipuser
-    if KSR.hdr.is_present('X-ACCESS-USERID')>0 then
-        sipuser = KSR.hdr.get('X-ACCESS-USERID')
+    if KSR.hdr.is_present('X_ao')>0 then
+        if KSR.hdr.get('X_ao')>0 then
+		        KSR.log("info", "recive_forward on  \n")
+		KSR.route("rt_forward_start")
+	end
         -- REMOVE X-HEADER
-        KSR.hdr.remove('X-ACCESS-USERID')
+        KSR.hdr.remove('X_ao')
 	KSR.log("err","rt_forward start\n") 
 	KSR.route("rt_forward_start")
-        KSR.rtpengine.start_recording()
+--        KSR.rtpengine.start_recording()
     end
+	KSR.route("rt_forward_start")
 -- конец проверки 
 	KSR.log("err","rt_forward "..KSR.pvx.var_get("exit").."\n") 
         end
