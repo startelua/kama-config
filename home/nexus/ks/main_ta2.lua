@@ -275,16 +275,18 @@ function ksr_route_relay(req_method)
         KSR.log("info", "sending delete command to rtpengine \n")
     elseif req_method == "INVITE" then 
     -- Провепка возможности форвардинга и записи
-	dao = KSR.hdr.gete("X-ao");
-	trunk=KSR.hdr.gete("sip-X_trunk");
+	local dao = KSR.hdr.gete("X-ao");
+	local trunk=KSR.hdr.gete("X-trunk");
 	   KSR.log("info", "X-ao recive_forward V"..dao.." trunk " ..trunk.. "\n")
 	if dao~="" then 
-	    KSR.pv.seti("$var(dao)",1)
+	    KSR.pv.seti("$var(dao)",dao)
 	    KSR.hdr.remove('X-ao')
 	elseif trunk~="" then
 	    KSR.pv.sets("$var(trunk)",trunk)
-	    KSR.hdr.remove('X-ao')
+	    KSR.hdr.remove('X-trunk')
 	end
+
+	   KSR.log("info", "289 X-ao recive_forward V"..KSR.pv.get("$var(dao)").." trunk " ..KSR.pv.gete("$var(trunk)").. "\n")
 
 --	    if KSR.hdr.is_present('X-ao')>0 then
 --		KSR.log("info", "X-ao recive_forward on  \n")
