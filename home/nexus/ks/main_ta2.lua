@@ -405,14 +405,15 @@ function ksr_onreply_manage_rtpengine()
   	   local rtp_option=" metadata=from:pre"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
            rtpengine =rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
 -- Провепка возможности форвардинга и записи    
-    if KSR.hdr.is_present('X_ao')>0 then
-	KSR.log("info", "X_ao recive_forward on  \n")
-        if KSR.hdr.get('X_ao')>0 then
-		        KSR.log("info", " X_ao >0 recive_forward  "..KSR.hdr.get('X_ao').."\n")
+   KSR.log("info", "X-ao recive_forward "..KSR.hdr.is_present('X-ao').."\n")
+    if KSR.hdr.is_present('X-ao')>0 then
+	KSR.log("info", "X-ao recive_forward on  \n")
+        if KSR.hdr.get('X-ao')>0 then
+		        KSR.log("info", "723 X_ao >0 recive_forward  "..KSR.hdr.get('X-ao').."\n")
 		KSR.route("rt_forward_start")
 	end
         -- REMOVE X-HEADER
-        KSR.hdr.remove('X_ao')
+        KSR.hdr.remove('X-ao')
 	KSR.log("err","rt_forward start\n") 
 	KSR.route("rt_forward_start")
 --        KSR.rtpengine.start_recording()
@@ -524,7 +525,6 @@ function ksr_route_dispatcher_select()
         local dest_uri = KSR.pv.get("$fu") or ""
 	local df = KSR.pv.get("$fd") or ""
 	KSR.log("info","Dispatcher from"..KSR.kx.get_furi().." dst "..KSR.pv.get("$ru").." src "..KSR.kx.get_srcip().."  dst uri "..dest_uri.."")
---	KSR.hdr.append('X-DOMEN: '..dest_uri..'\r\n')
 	KSR.hdr.append('X-DOMEN-2: '..df..'\r\n')
 	KSR.hdr.append('X-kam : ' ..getHostname()..'\r\n')
     else
