@@ -275,19 +275,27 @@ function ksr_route_relay(req_method)
         KSR.log("info", "sending delete command to rtpengine \n")
     elseif req_method == "INVITE" then 
     -- Провепка возможности форвардинга и записи
-    v = KSR.hdr.gete("X-ao");
-    trunk=KSR.hdr.gete("sip-X_trunk");
-	   KSR.log("info", "X-ao recive_forward V"..v.." trunk " ..trunk.. "\n")
-	    if KSR.hdr.is_present('X-ao')>0 then
-		KSR.log("info", "X-ao recive_forward on  \n")
+	dao = KSR.hdr.gete("X-ao");
+	trunk=KSR.hdr.gete("sip-X_trunk");
+	   KSR.log("info", "X-ao recive_forward V"..dao.." trunk " ..trunk.. "\n")
+	if dao~="" then 
+	    KSR.pv.seti("$var(dao)",1)
+	    KSR.hdr.remove('X-ao')
+	elseif trunk~="" then
+	    KSR.pv.sets("$var(trunk)",trunk)
+	    KSR.hdr.remove('X-ao')
+	end
+
+--	    if KSR.hdr.is_present('X-ao')>0 then
+--		KSR.log("info", "X-ao recive_forward on  \n")
 --    		if KSR.hdr.get('X-ao')>0 then
-		        KSR.log("info", "723 X_ao >0 recive_forward  "..KSR.hdr.get('X-ao').."\n")
+--		        KSR.log("info", "723 X_ao >0 recive_forward  "..KSR.hdr.get('X-ao').."\n")
 --		    KSR.route("rt_forward_start")
 --		end
     		-- REMOVE X-HEADER
 --    		KSR.hdr.remove('X-ao')
 --		KSR.log("err","rt_forward start\n") 
-	    end
+--	    end
 
     elseif req_method == "INVITE" or req_method == "UPDATE" then
         if KSR.tm.t_is_set("branch_route") < 0 then
@@ -311,6 +319,10 @@ function ksr_route_relay(req_method)
         if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
             KSR.log("info", "request contains sdp, sending answer command to rtpengine \n")
             ksr_route_rtp_engine(req_method)
+-- start
+	    KSR.log("info", "323 X_ao >0 recive_forward  "..KSR.pv.get("$avp(dao)").."\n")
+-- end 
+
         end
     end
 
@@ -418,22 +430,13 @@ function ksr_onreply_manage_rtpengine()
   	   local rtp_option=" metadata=from:pre"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
            rtpengine =rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
 -- Провепка возможности форвардинга и записи    
-   KSR.log("info", "X-ao recive_forward "..KSR.hdr.is_present('X-ao').."\n")
-    if KSR.hdr.is_present('X-ao')>0 then
-	KSR.log("info", "X-ao recive_forward on  \n")
-        if KSR.hdr.get('X-ao')>0 then
-		        KSR.log("info", "723 X_ao >0 recive_forward  "..KSR.hdr.get('X-ao').."\n")
+	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.get("$avp(dao)").."\n")
+	    if KSR.pv.gete("$avp(dao)") then 
+		KSR.log("info", "444 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
 		KSR.route("rt_forward_start")
-	end
-        -- REMOVE X-HEADER
-        KSR.hdr.remove('X-ao')
-	KSR.log("err","rt_forward start\n") 
-	KSR.route("rt_forward_start")
---        KSR.rtpengine.start_recording()
-    end
-	KSR.route("rt_forward_start")
+		KSR.log("info","435 rt_forward "..KSR.pvx.var_get("exit").."\n")     
+	    end 
 -- конец проверки 
-	KSR.log("err","rt_forward "..KSR.pvx.var_get("exit").."\n") 
         end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
 --	  local rtp_option="record-call=yes metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
@@ -554,7 +557,16 @@ function ksr_route_rtp_engine(req_method)
 --	     local rtp_option="record-call=yes  "
 -- rtp_option..
            rtpengine = "ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
-        end
+-- Провепка возможности форвардинга и записи    
+	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
+	    if KSR.pv.gete("$avp(dao)") then 
+		KSR.log("info", "444 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
+		KSR.route("rt_forward_start")
+		KSR.log("info","435 rt_forward "..KSR.pvx.var_get("exit").."\n")     
+	    end 
+-- конец проверки 
+	
+	end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
 --    rtp_option..        local rtp_option="record-call=yes metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
            rtpengine ="ICE=remove codec-strip=all codec-offer=PCMA codec-offer=PCMU codec-offer=telephone-event RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
