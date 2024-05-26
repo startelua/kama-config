@@ -273,8 +273,21 @@ function ksr_route_relay(req_method)
             KSR.tm.t_on_branch("ksr_branch_manage");
         end
         KSR.log("info", "sending delete command to rtpengine \n")
-	
-
+    elseif req_method == "INVITE" then 
+    -- Провепка возможности форвардинга и записи
+    v = KSR.hdr.gete("X-ao");
+    trunk=KSR.hdr.gete("sip-X_trunk");
+	   KSR.log("info", "X-ao recive_forward V"..v.." trunk " ..trunk.. "\n")
+	    if KSR.hdr.is_present('X-ao')>0 then
+		KSR.log("info", "X-ao recive_forward on  \n")
+--    		if KSR.hdr.get('X-ao')>0 then
+		        KSR.log("info", "723 X_ao >0 recive_forward  "..KSR.hdr.get('X-ao').."\n")
+--		    KSR.route("rt_forward_start")
+--		end
+    		-- REMOVE X-HEADER
+--    		KSR.hdr.remove('X-ao')
+--		KSR.log("err","rt_forward start\n") 
+	    end
 
     elseif req_method == "INVITE" or req_method == "UPDATE" then
         if KSR.tm.t_is_set("branch_route") < 0 then
