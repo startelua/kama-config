@@ -91,17 +91,11 @@ end
 -- OPTIONS Processing sending keepalive 200
 ------------------------------------------
 function ksr_route_options_process(request_method)
-    --  NAT KEEPALIVE SIP OPTION
---[[        if KSR.is_OPTIONS() then
-        if KSR.is_myself_ruri() and KSR.corex.has_ruri_user()<0 then
-            KSR.sl.sl_send_reply(200, "Keepalive")
-            KSR.x.exit()
-        end
-        end ]]--
-    -- NAT
       if request_method == "OPTIONS"
-            and KSR.is_myself(KSR.pv.get("$ru"))
-            and KSR.pv.is_null("$rU") then
+	    and KSR.is_myself_ruri() 
+	    and KSR.corex.has_ruri_user()<0 then
+--            and KSR.is_myself(KSR.pv.get("$ru"))
+--            and KSR.pv.is_null("$rU") then
         KSR.log("info", "sending keepalive response 200 \n")
         KSR.sl.sl_send_reply(200, "Keepalive")
         KSR.x.exit()
