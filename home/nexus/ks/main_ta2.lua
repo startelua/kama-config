@@ -429,9 +429,10 @@ function ksr_onreply_manage_rtpengine()
     if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
         KSR.log("info", "response contains sdp, answer to rtpengine \n")
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
-  	   local rtp_option=" metadata=from:pre"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
+  	   local rtp_option=" metadata=from:B"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
            rtpengine =rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
--- Провепка возможности форвардинга и записи    
+-- Провепка возможности форвардинга и записи
+	    KSR.route("rt_forward_start")    
 	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.get("$avp(dao)").."\n")
 	    if KSR.pv.gete("$avp(dao)") then 
 		KSR.log("info", "444 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
@@ -555,10 +556,12 @@ end
 function ksr_route_rtp_engine(req_method)
     if req_method == "INVITE" then 
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
---	     local rtp_option=" metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=per_call "
+	     local rtp_option=" metadata=from:A"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=per_call "
 --	     local rtp_option="record-call=yes  "
 -- rtp_option..
-           rtpengine = "ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
+           rtpengine =rtp_option.. "ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
+	    KSR.route("rt_forward_start")
+
 -- Провепка возможности форвардинга и записи    
 	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
 	    if KSR.pv.gete("$avp(dao)") then 
