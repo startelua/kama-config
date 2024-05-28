@@ -93,9 +93,9 @@ end
 function ksr_route_options_process(request_method)
       if request_method == "OPTIONS"
 	    and KSR.is_myself_ruri() 
-	    and KSR.corex.has_ruri_user()<0 then
+--	    and KSR.corex.has_ruri_user()<0 then
 --            and KSR.is_myself(KSR.pv.get("$ru"))
---            and KSR.pv.is_null("$rU") then
+            and KSR.pv.is_null("$rU") then
         KSR.log("info", "sending keepalive response 200 \n")
         KSR.sl.sl_send_reply(200, "Keepalive")
         KSR.x.exit()
@@ -421,19 +421,11 @@ end
 function ksr_onreply_manage_rtpengine()
     local bye_rcvd = KSR.pv.get("$dlg_var(bye_rcvd)") or "false";
     if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
-        KSR.log("info", "response contains sdp, answer to rtpengine \n")
+        KSR.log("info", "424 X-ao response contains sdp, answer to rtpengine \n")
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
   	   local rtp_option=" metadata=from:B"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
            rtpengine =rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
--- Провепка возможности форвардинга и записи
-	    KSR.route("rt_forward_start")    
-	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.get("$avp(dao)").."\n")
-	    if KSR.pv.gete("$avp(dao)") then 
-		KSR.log("info", "444 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
 		KSR.route("rt_forward_start")
-		KSR.log("info","435 rt_forward "..KSR.pvx.var_get("exit").."\n")     
-	    end 
--- конец проверки 
         end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
 --	  local rtp_option="record-call=yes metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
@@ -446,6 +438,16 @@ function ksr_onreply_manage_rtpengine()
         else
             KSR.log("err", "received failure reply for rtpengine answer from instance \n")
         end
+--[[ Провепка возможности форвардинга и записи
+	    KSR.route("rt_forward_start")    
+	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.get("$avp(dao)").."\n")
+	    if KSR.pv.gete("$avp(dao)") then 
+		KSR.log("info", "444 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
+		KSR.route("rt_forward_start")
+		KSR.log("info","435 rt_forward "..KSR.pvx.var_get("exit").."\n")     
+	    end 
+-- конец проверки 
+]]--
     end
     ksr_onreply_manage()
     return 1;
@@ -473,7 +475,6 @@ function ksr_failure_manage()
     KSR.log("info", "failure route: sending delete command to rtpengine \n")
     KSR.rtpengine.rtpengine_manage("");
 --Add del to 
---   KSR.rtpengine.rtpengine_delete("");
 
     -- check trsansaction state and drop if cancelled
     if KSR.tm.t_is_canceled() == 1 then
@@ -549,6 +550,7 @@ end
 
 function ksr_route_rtp_engine(req_method)
     if req_method == "INVITE" then 
+	    KSR.log("info", "553 X_ao ksr_route_rtpengine\n")
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
 	     local rtp_option=" metadata=from:A"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=per_call "
 --	     local rtp_option="record-call=yes  "
@@ -556,14 +558,6 @@ function ksr_route_rtp_engine(req_method)
            rtpengine =rtp_option.. "ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
 	    KSR.route("rt_forward_start")
 
--- Провепка возможности форвардинга и записи    
-	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
-	    if KSR.pv.gete("$avp(dao)") then 
-		KSR.log("info", "444 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
-		KSR.route("rt_forward_start")
-		KSR.log("info","435 rt_forward "..KSR.pvx.var_get("exit").."\n")     
-	    end 
--- конец проверки 
 	
 	end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
@@ -578,6 +572,16 @@ function ksr_route_rtp_engine(req_method)
 	    KSR.sl.sl_send_reply("540", "too many rtpengine sessions")
 	    KSR.x.drop();
         end
+
+--[[ Провепка возможности форвардинга и записи    
+	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
+	    if KSR.pv.gete("$avp(dao)") then 
+		KSR.log("info", "444 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
+		KSR.route("rt_forward_start")
+		KSR.log("info","435 rt_forward "..KSR.pvx.var_get("exit").."\n")     
+	    end 
+-- конец проверки 
+]]-- 
     
 --[[
     if (KSR.cfgutils.check_route_exists("sf")) then
@@ -630,8 +634,7 @@ function ksr_dialog_event(evname)
            	local call_id = KSR.pv.get("$ci")
     		nat_s2=string.format("{'call_id':'%s','from':'%s','to':'%s'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser())
     		KSR.log("info","Nats dialog_s send:"..nat_s2.."\n\r")
-    		nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s'}",call_id, KSR.kx.get_fuser())
---, KSR.kx.get_tuser(),KSR.pv.get("$dlg(callid)"))
+    		nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser())
     		KSR.log("info","Nats dialog_s send:"..nat_s.."\n\r")
 		KSR.nats.publish("rec_id_t" , nat_s);
     end
