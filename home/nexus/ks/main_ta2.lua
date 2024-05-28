@@ -91,10 +91,8 @@ end
 -- OPTIONS Processing sending keepalive 200
 ------------------------------------------
 function ksr_route_options_process(request_method)
-      if request_method == "OPTIONS"
-	    and KSR.is_myself_ruri() 
---	    and KSR.corex.has_ruri_user()<0 then
---            and KSR.is_myself(KSR.pv.get("$ru"))
+    if request_method == "OPTIONS"
+            and KSR.is_myself_ruri() 
             and KSR.pv.is_null("$rU") then
         KSR.log("info", "sending keepalive response 200 \n")
         KSR.sl.sl_send_reply(200, "Keepalive")
@@ -200,23 +198,12 @@ function ksr_route_withindlg(request_method)
     if KSR.rr.loose_route() > 0 then
         KSR.log("info", "in-dialog request,loose_route \n");
         ksr_route_dlguri();
-        if request_method == "ACK" then
---[[             KSR.rtpengine.stop_recording()
-	     local rtp_option=" metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=pre_call "
-         if KSR.rtpengine.rtpengine_manage(rtpengine) > 0 then
-            KSR.log("info", "received success reply for rtpengine answer from instance ksr_route_rtp_engine \n")
-        else
-            KSR.log("err", "received failure reply for rtpengine answer from instance \n")
-	    KSR.sl.sl_send_reply("540", "too many rtpengine sessions")
-	    KSR.x.drop();
-        end
-]]--	 
-	KSR.log("err","rt_forward stop and start record 212\n") 
-	KSR.route("rt_forward_stop")
-	KSR.log("err","rt_forward "..KSR.pvx.var_get("exit").."\n") 
-       KSR.rtpengine.start_recording()
-       ksr_route_natmanage();
-
+        if request_method == "ACK" then 
+--   and KSR.isflagset(FLT_FROM_ASTERISK) then
+KSR.log("info", "203 X-ao recive_forward V"..KSR.pv.get("$var(dao)").." trunk " ..KSR.pv.gete("$var(trunk)").. "\n")
+	   KSR.route("rt_forward_stop")
+	   KSR.rtpengine.start_recording();
+           ksr_route_natmanage();
         end
         ksr_route_relay(request_method);
         KSR.x.exit()
@@ -229,7 +216,6 @@ function ksr_route_withindlg(request_method)
             -- no loose-route, but stateful ACK; must be an ACK after a 487 or e.g. 404 from upstream server
             KSR.log("info", "in-dialog request,not loose_route with transaction - relaying \n")
             ksr_route_relay(request_method);
-
         end
         KSR.log("err", "in-dialog request,not loose_route without transaction,exit the  \n")
         KSR.x.exit()
@@ -267,33 +253,21 @@ function ksr_route_relay(req_method)
             KSR.tm.t_on_branch("ksr_branch_manage");
         end
         KSR.log("info", "sending delete command to rtpengine \n")
-    elseif req_method == "INVITE" then 
-    -- Провепка возможности форвардинга и записи
-	local dao = KSR.hdr.gete("X-ao");
-	local trunk=KSR.hdr.gete("X-trunk");
-	   KSR.log("info", "X-ao recive_forward V"..dao.." trunk " ..trunk.. "\n")
-	if dao~="" then 
-	    KSR.pv.seti("$var(dao)",dao)
-	    KSR.hdr.remove('X-ao')
-	elseif trunk~="" then
-	    KSR.pv.sets("$var(trunk)",trunk)
-	    KSR.hdr.remove('X-trunk')
-	end
-
-	   KSR.log("info", "289 X-ao recive_forward V"..KSR.pv.get("$var(dao)").." trunk " ..KSR.pv.gete("$var(trunk)").. "\n")
-
---	    if KSR.hdr.is_present('X-ao')>0 then
---		KSR.log("info", "X-ao recive_forward on  \n")
---    		if KSR.hdr.get('X-ao')>0 then
---		        KSR.log("info", "723 X_ao >0 recive_forward  "..KSR.hdr.get('X-ao').."\n")
---		    KSR.route("rt_forward_start")
---		end
-    		-- REMOVE X-HEADER
---    		KSR.hdr.remove('X-ao')
---		KSR.log("err","rt_forward start\n") 
---	    end
 
     elseif req_method == "INVITE" or req_method == "UPDATE" then
+  -- Провепка возможности форвардинга и записи
+    local dao = KSR.hdr.gete("X-ao");
+    local trunk=KSR.hdr.gete("X-trunk");
+       KSR.log("info", "X-ao recive_forward V "..dao.." trunk " ..trunk.. "\n")
+    if dao~="" then 
+        KSR.pv.seti("$var(dao)",dao)
+        KSR.hdr.remove('X-ao')
+    elseif trunk~="" then
+        KSR.pv.sets("$var(trunk)",trunk)
+        KSR.hdr.remove('X-trunk')
+    end
+
+-- 
         if KSR.tm.t_is_set("branch_route") < 0 then
             KSR.tm.t_on_branch("ksr_branch_manage")
         end
@@ -315,10 +289,6 @@ function ksr_route_relay(req_method)
         if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
             KSR.log("info", "request contains sdp, sending answer command to rtpengine \n")
             ksr_route_rtp_engine(req_method)
--- start
-	    KSR.log("info", "323 X_ao >0 recive_forward  "..KSR.pv.get("$avp(dao)").."\n")
--- end 
-
         end
     end
 
@@ -421,15 +391,12 @@ end
 function ksr_onreply_manage_rtpengine()
     local bye_rcvd = KSR.pv.get("$dlg_var(bye_rcvd)") or "false";
     if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
-        KSR.log("info", "424 X-ao response contains sdp, answer to rtpengine \n")
+        KSR.log("info", "response contains sdp, answer to rtpengine \n")
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
-  	   local rtp_option=" metadata=from:B"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
-           rtpengine =rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
-		KSR.route("rt_forward_start")
+
+           rtpengine = "ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
         end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
---	  local rtp_option="record-call=yes metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
---	rtp_option..
            rtpengine = "ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
         end
 
@@ -438,16 +405,6 @@ function ksr_onreply_manage_rtpengine()
         else
             KSR.log("err", "received failure reply for rtpengine answer from instance \n")
         end
---[[ Провепка возможности форвардинга и записи
-	    KSR.route("rt_forward_start")    
-	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.get("$avp(dao)").."\n")
-	    if KSR.pv.gete("$avp(dao)") then 
-		KSR.log("info", "444 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
-		KSR.route("rt_forward_start")
-		KSR.log("info","435 rt_forward "..KSR.pvx.var_get("exit").."\n")     
-	    end 
--- конец проверки 
-]]--
     end
     ksr_onreply_manage()
     return 1;
@@ -475,6 +432,7 @@ function ksr_failure_manage()
     KSR.log("info", "failure route: sending delete command to rtpengine \n")
     KSR.rtpengine.rtpengine_manage("");
 --Add del to 
+--   KSR.rtpengine.rtpengine_delete("");
 
     -- check trsansaction state and drop if cancelled
     if KSR.tm.t_is_canceled() == 1 then
@@ -491,6 +449,8 @@ function ksr_failure_manage()
   --  KSR.sl.send_reply(503, "Service Unavailable")
     KSR.x.exit()
 end
+
+
 
 function service_callback()
     local dispatch_set = 1
@@ -512,10 +472,6 @@ end
 function ksr_route_direction()
     local dispatch_set = 1
     if KSR.dispatcher.ds_is_from_list(dispatch_set) > 0 then
--- ADD  time to start call 
-	local start_time = KSR.pv.get("$TF") or ""
-        KSR.pv.sets("$avp(start_time)", start_time)
-
         KSR.log("info","Call from Asterisk " ..KSR.kx.get_furi().." dst "..KSR.pv.get("$ru").." src "..KSR.kx.get_srcip().."")
         KSR.setflag(FLT_FROM_ASTERISK);
         return 1
@@ -550,69 +506,38 @@ end
 
 function ksr_route_rtp_engine(req_method)
     if req_method == "INVITE" then 
-	    KSR.log("info", "553 X_ao ksr_route_rtpengine\n")
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
-	     local rtp_option=" metadata=from:A"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=per_call "
---	     local rtp_option="record-call=yes  "
--- rtp_option..
-           rtpengine =rtp_option.. "ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
-	    KSR.route("rt_forward_start")
-
-	
-	end
+-- 22.03 add label to record
+	  local rtp_option=" metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label="..KSR.pv.get("$ci")
+           rtpengine = rtp_option.."ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
+        end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
---    rtp_option..        local rtp_option="record-call=yes metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().." label=calleeR "
-           rtpengine ="ICE=remove codec-strip=all codec-offer=PCMA codec-offer=PCMU codec-offer=telephone-event RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
+	  local rtp_option="record-call=yes   metadata=from:"..KSR.kx.get_tuser().."|to:"..KSR.kx.get_fuser().." label="..KSR.pv.get("$ci")
+          rtpengine =rtp_option.."ICE=remove codec-strip=all codec-offer=PCMA codec-offer=PCMU codec-offer=telephone-event RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
         end 
     
        if KSR.rtpengine.rtpengine_manage(rtpengine) > 0 then
             KSR.log("info", "received success reply for rtpengine answer from instance ksr_route_rtp_engine \n")
+--	    if (KSR.isflagset(FLT_FROM_ASTERISK)) then
+KSR.log("info", "522 X-ao recive_forward V"..KSR.pv.get("$var(dao)").." trunk " ..KSR.pv.gete("$var(trunk)").. "\n")
+		KSR.route("rt_forward_start")
+--	    end
         else
             KSR.log("err", "received failure reply for rtpengine answer from instance \n")
-	    KSR.sl.sl_send_reply("540", "too many rtpengine sessions")
-	    KSR.x.drop();
+	     KSR.sl.sl_send_reply("540", "too many rtpengine sessions")
+             KSR.x.drop();
+
         end
 
---[[ Провепка возможности форвардинга и записи    
-	    KSR.log("info", "550 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
-	    if KSR.pv.gete("$avp(dao)") then 
-		KSR.log("info", "444 X_ao >0 recive_forward  "..KSR.pv.gete("$avp(dao)").."\n")
-		KSR.route("rt_forward_start")
-		KSR.log("info","435 rt_forward "..KSR.pvx.var_get("exit").."\n")     
-	    end 
--- конец проверки 
-]]-- 
-    
---[[
-    if (KSR.cfgutils.check_route_exists("sf")) then
-	KSR.log("err", "Route ACTIVE \n")
-      else
-	KSR.log("err", "Route NOT active \n")
-    end
-
-    if (KSR.cfgutils.route_if_exists("sf")) then
-	KSR.log("err", "Route EXIST ACTIVE \n")
-      else
-	KSR.log("err", "Route NOT EXIST active \n")
-    end
-]]--
 
    end
 
     if req_method == "ACK" or req_method == "BYE"  then
         KSR.rtpengine.rtpengine_manage()
     end
---[[        if reg_metod =="BYE" then 
-        	local to_uri = KSR.pv.get("$tu");
-        	local call_id = KSR.pv.get("$ci")
-        	local from_number = KSR.pv.get("$fU") or ""
-		KSR.log("info","Nats send " ..call_id.." from ".. " to "..to_uri.."\n\r") 
---		KSR.nats.publish("rec_id" , "{'call_id':'"..call_d.."','from':'"..from_number.."','to':'"..to_uri.."}");
-    	end ]]-- 
+
 end
 --[[---------------- EVENT ]]--
-
-
 --[[--------------------------------------------------------------------------
    Name: ksr_htable_event(evname)
    Desc: callback for the given htable event-name
@@ -623,35 +548,12 @@ function ksr_htable_event(evname)
     return 1;
 end
 
---[[--------------------------------------------------------------------------
-   Name: ksr_dialog_event(evname)
-   Desc: get the dispatch domain from the dispatcher list based on policy
-------------------------------------------------------------------------------]]
-
-function ksr_dialog_event(evname)
-    if (evname == "dialog:start") then
-        KSR.log("info", "in dialog event callback with event-name - " .. evname .. "\n")
-           	local call_id = KSR.pv.get("$ci")
-    		nat_s2=string.format("{'call_id':'%s','from':'%s','to':'%s'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser())
-    		KSR.log("info","Nats dialog_s send:"..nat_s2.."\n\r")
-    		nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser())
-    		KSR.log("info","Nats dialog_s send:"..nat_s.."\n\r")
-		KSR.nats.publish("rec_id_t" , nat_s);
-    end
-    if (evname == "dialog:end") or (evname == "dialog:failed") then
-        KSR.log("info", "in dialog event callback with event-name - " .. evname .. "\n")
---           	local call_id = KSR.pv.get("$ci")
-    		nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser())
-    		KSR.log("info","Nats dialog_e send:"..nat_s.."\n\r")
-		KSR.nats.publish("rec_id_t" , nat_s);
-    end
-end
 
 --[[--------------------------------------------------------------------------
    Name: ksr_xhttp_event(evname)
    Desc: http request and response handling
 ------------------------------------------------------------------------------]]
-
+--[[
 function ksr_xhttp_event(evname)
     local rpc_method = KSR.pv.get("$rm") or ""
     if ((rpc_method == "POST" or rpc_method == "GET")) then
@@ -661,10 +563,7 @@ function ksr_xhttp_event(evname)
     end
     return 1
 end
-
-
-
-
+]]--
 function ksr_siptrase_event(evname)
 --[[     KSR.log("err", " event Name. " ..evname.."  "..KSR.pv.get("$rm").."\n")]]--
      if (evname == "siptrace:msg") then  
@@ -675,7 +574,7 @@ function ksr_siptrase_event(evname)
         end
     end
 end 
---[[
+
 function ksr_xhttp_event(evname)
     local rpc_method = KSR.pv.get("$rm") or ""
     if ((rpc_method == "POST" or rpc_method == "GET")) then
@@ -683,24 +582,20 @@ function ksr_xhttp_event(evname)
             KSR.log("err", "error while executing xmlrpc event" .. "\n")
         end
     end
-    ksr.log("err","hu  "..KSR.pv.get("$hu").." парсер "..KSR.pv.get("$(hu{s.substr,0,8})") )
+    KSR.log("err","hu  "..KSR.pv.get("$hu").." парсер "..KSR.pv.get("$(hu{s.substr,0,8})") )
     xhttp_prom_root=KSR.pv.get("$(hu{s.substr,0,8})")
 
     if xhttp_prom_root =="/metrics" then
-        ksr.log("info","Called metrics")
+        KSR.log("info","Called metrics")
     end 
     return 1
 end
-]]--
-
-
 
 function ksr_nats_event(evname)
 	KSR.info("===== nats module received event: " .. evname ..", data:" .. KSR.pv.gete('$natsData') .. "\n");
 	--ksr.log("info",
 	return 1;
 end
-
 
 
 function ksr_dispatcher_event(evname)
@@ -710,26 +605,60 @@ function ksr_dispatcher_event(evname)
 
 end
 
+--[[--------------------------------------------------------------------------
+   Name: ksr_dialog_event(evname)
+   Desc: get the dispatch domain from the dispatcher list based on policy
+------------------------------------------------------------------------------]]
 
-function ksr_topos_event(evname)
-        KSR.log("info","!topos event "..evname.." ip "..KSR.pv.gete('$sndto(ip)').."\n");
-  if (evname=="topos:msg-outgoing") then
-      if (KSR.pv.gete('$sndto(ip)')=="10.128.0.114") then
-	        KSR.log("info","topos out drop outgoing ")
-	    KSR.x.drop();
+function ksr_dialog_event(evname)
+--    local is_downstream = KSR.pv.get("$avp(is_downstream)") or "false";
+        KSR.xlog.xerr("in dialog event callback with event-name - " .. evname .. "\n")
+        local call_id = KSR.pv.get("$ci")
+-- test 
+	if (KSR.isflagset(FLT_FROM_ASTERISK)) then 
+	    status ="ast"
+	elseif  (KSR.isflagset(FLT_FROM_PROVIDER)) then
+	    status ="prov"
 	end 
+    
+
+--
+
+    if (evname == "dialog:start")  and     KSR.isflagset(FLT_FROM_ASTERISK)    then
+--        KSR.log("info", "in dialog event callback with event-name - " .. evname .. "\n")
+	    nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s','status':'start'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser())
+    		KSR.log("info","Nats dialog_s send:"..nat_s.."\n\r")
+		KSR.xlog.xerr("Nats dialog_s send:"..nat_s.."\n\r")
+--		KSR.log("info","Nats dialog_e send:"..KSR.pv.get("dlg(callid)").."\n\r")
+--	KSR.nats.publish("rec_id" , nat_s);
     end
 
-  if (evname=="topos:msg-receiving") then
-      if (KSR.pv.gete('$sndto(ip)')=="10.128.0.114") then
-	        KSR.log("info","topos out drop resive")
-	    KSR.x.drop();
-	end 
-    end
+    if (evname == "dialog:end") then 
+-- and  KSR.isflagset(FLT_FROM_ASTERISK)  then
+	
+	nat_d=string.format("{'call_id':'%s','from':'%s','to':'%s',flag:%s ,'status':'end'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser(),status)
+	KSR.xlog.xerr( "in dialog event callback with event-name - " .. evname .."  "..nat_d.."\n")
 
+--        if (KSR.isflagset(FLT_FROM_PROVIDER)) then
+--	    nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s','status':'end'}",call_id, KSR.kx.get_tuser() ,KSR.kx.get_fuser())
+--	else 
+	    nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s','status':'end'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser())
+--	end 
+--    		KSR.log("info","Nats dialog_e send:"..nat_s.."\n\r")
+		KSR.xlog.xerr("Nats dialog_e send:"..nat_s.."\n\r")
+	KSR.nats.publish("rec_id" , nat_s);
+    end
+    if (evname == "dialog:failed") then
+--and   KSR.isflagset(FLT_FROM_ASTERISK)    then
+--        KSR.log("info", "in dialog event callback with event-name - " .. evname .. "\n")
+	    nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s','status':'failed'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser())
+    		KSR.log("info","Nats dialog_e send:"..nat_s.."\n\r")
+		KSR.xlog.xerr("Nats dialog_f send:"..nat_s.."\n\r")
+--		KSR.log("info","Nats dialog_e send:"..KSR.pv.get("dlg(callid)").."\n\r")
+	KSR.nats.publish("rec_id" , nat_s);
+    end
 
 end
-
 
 
 --[[ event_route[xhttp:request] {
