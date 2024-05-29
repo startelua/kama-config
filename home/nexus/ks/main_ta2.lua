@@ -635,7 +635,7 @@ function ksr_dialog_event(evname)
 
     if (evname == "dialog:start")  and     KSR.isflagset(FLT_FROM_ASTERISK)    then
 --        KSR.log("info", "in dialog event callback with event-name - " .. evname .. "\n")
-	    nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s','status':'start'}",call_id, KSR.kx.get_fuser(), KSR.kx.get_tuser())
+	    nat_s=string.format("{'call_id':'%s','from':'%s','to':'%s','name':'%s','status':'start'}",call_id, KSR.kx.get_fuser(),getHostname(), KSR.kx.get_tuser())
     		KSR.log("info","Nats dialog_s send:"..nat_s.."\n\r")
 		KSR.xlog.xerr("Nats dialog_s send:"..nat_s.."\n\r")
 --		KSR.log("info","Nats dialog_e send:"..KSR.pv.get("dlg(callid)").."\n\r")
