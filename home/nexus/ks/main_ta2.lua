@@ -200,13 +200,14 @@ function ksr_route_withindlg(request_method)
         ksr_route_dlguri();
         if request_method == "ACK" then 
 -- Проверка на передачу rtp 
-	    if (KSR.isflagset(FLT_FROM_ASTERISK)) and KSR.pv.get("$avp(dao)") ==1 then
+--	    if (KSR.isflagset(FLT_FROM_ASTERISK)) and 
+--		if KSR.pv.get("$avp(dao)") ==1 then
 		KSR.log("info", "204 X-ao recive_forward V "..KSR.pv.get("$avp(dao)").." trunk " ..KSR.pv.gete("$avp(trunk)").. "\n")
 		KSR.route("rt_forward_stop")
-	    elseif (KSR.isflagset(FLT_FROM_ASTERISK)) and KSR.pv.get("$avp(dao)") ==1 then
-		KSR.log("info", "207 X-ao recive_forward V "..KSR.pv.get("$avp(dao)").." rec "..KSR.pv.get("$avp(dao)").." trunk " ..KSR.pv.gete("$avp(trunk)").. "\n")
+--	    elseif (KSR.isflagset(FLT_FROM_ASTERISK)) and KSR.pv.get("$avp(dao)") ==1 then
+--		KSR.log("info", "207 X-ao recive_forward V "..KSR.pv.get("$avp(dao)").." rec "..KSR.pv.get("$avp(dao)").." trunk " ..KSR.pv.gete("$avp(trunk)").. "\n")
 		KSR.rtpengine.start_recording();
-	    end 
+--	    end 
            ksr_route_natmanage();
         end
         ksr_route_relay(request_method);
@@ -525,12 +526,11 @@ function ksr_route_rtp_engine(req_method)
     
        if KSR.rtpengine.rtpengine_manage(rtpengine) > 0 then
             KSR.log("info", "received success reply for rtpengine answer from instance ksr_route_rtp_engine \n")
--- Проверка на передачу rtp 
+-- Проверка на передачу rtp premedia 
 	    if (KSR.isflagset(FLT_FROM_ASTERISK)) and KSR.pv.get("$avp(dao)") ==1 then
-		KSR.log("info", "522 X-ao recive_forward V "..KSR.pv.get("$avp(dao)").." trunk " ..KSR.pv.gete("$avp(trunk)").. "\n")
+--		KSR.log("info", "522 X-ao recive_forward V "..KSR.pv.get("$avp(dao)").." trunk " ..KSR.pv.gete("$avp(trunk)").. "\n")
 		KSR.route("rt_forward_start")
-	    end
--- 
+	    end 
         else
             KSR.log("err", "received failure reply for rtpengine answer from instance \n")
 	     KSR.sl.sl_send_reply("540", "too many rtpengine sessions")
