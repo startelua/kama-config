@@ -297,6 +297,10 @@ KSR.log("info", "269 X-ao recive_forward V"..KSR.pv.get("$avp(dao)").." trunk " 
         if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
             KSR.log("info", "request contains sdp, sending answer command to rtpengine \n")
             ksr_route_rtp_engine(req_method)
+
+-----------------------------------------------------
+		KSR.route("rt_forward_stop")
+
         end
     end
 
@@ -542,7 +546,12 @@ function ksr_route_rtp_engine(req_method)
    end
 
     if req_method == "ACK" or req_method == "BYE"  then
+
         KSR.rtpengine.rtpengine_manage()
+
+--------------------
+		KSR.route("rt_forward_stop")
+-------------------
     end
 
 end
@@ -639,7 +648,7 @@ function ksr_dialog_event(evname)
     		KSR.log("info","Nats dialog_s send:"..nat_s.."\n\r")
 		KSR.xlog.xerr("Nats dialog_s send:"..nat_s.."\n\r")
 --		KSR.log("info","Nats dialog_e send:"..KSR.pv.get("dlg(callid)").."\n\r")
---	KSR.nats.publish("rec_id" , nat_s);
+	KSR.nats.publish("call_info" , nat_s);
     end
 
     if (evname == "dialog:end") then 
