@@ -733,11 +733,27 @@ end
 
 function ksr_xhttp_event(evname)
     local rpc_method = KSR.pv.get("$rm") or ""
+    xhttp_prom_root=KSR.pv.get("$(hu{s.substr,0,8})")
+  if xhttp_prom_root =="/XMLRPC" then
     if ((rpc_method == "POST" or rpc_method == "GET")) then
         if KSR.xmlrpc.dispatch_rpc() < 0 then
             KSR.log("err", "error while executing xmlrpc event" .. "\n")
         end
-    end
+      end
+  end
+  if xhttp_prom_root =="/ws" then
+            KSR.log("err", "WSS  error while executing xmlrpc event " ..KSR.pv.get("$hdr(Upgrade)").."     "..KSR.pv.get("$hdr(Connection)").. "\n")
+
+	    KSR.websocket.handle_handshake();
+	if (KSR.pv.get("$hdr(Upgrade)")=="websocket" and KSR.pv.get("$hdr(Connection)")=="Upgrade"
+--                        and rpc_metod=="GET") 
+		    )then
+            KSR.log("err", "WSS 22  error while executing xmlrpc event" .. "\n")
+		--xhttp_reply("404", "Not found", "", "");
+		KSR.xhttp.xhttp_reply("200",  "reason", "ctype","Not found");
+	end 
+  end 
+
     KSR.log("err","hu  "..KSR.pv.get("$hu").." парсер "..KSR.pv.get("$(hu{s.substr,0,8})") )
     xhttp_prom_root=KSR.pv.get("$(hu{s.substr,0,8})")
 
@@ -746,6 +762,10 @@ function ksr_xhttp_event(evname)
     end 
     return 1
 end
+function ksr_ws_event(evname)
+            KSR.log("err", "error while executing xmlrpc event" ..KSR.pv.get("$ws_conid").. "\n")
+
+end 
 
 --[[--------------------------------------------------------------------------
    Name: ksr_nats_event(evname)
@@ -817,6 +837,7 @@ end
 if (evname == "dialog:end") then
 	local hangup_party=KSR.pv.get("$avp(hangup_party)")
         local start_time=KSR.htable.sht_gete("bsec",call_id)
+	KSR.xlog.xerr("B sec "..start_time .."\n")
 	KSR.htable.sht_rm("bsec",call_id)
 --        local f_bye= KSR.pv.gete('$(route_uri{uri.param,from_tag}{s.select,0,;})')
         local f_bye= KSR.pv.gete('$route_uri')
