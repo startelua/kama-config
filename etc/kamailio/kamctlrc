@@ -5,7 +5,7 @@
 ## will use their internal default values.
 
 ## the SIP domain
-# SIP_DOMAIN=kamailio.org
+SIP_DOMAIN=cw-kam1.skeef.ua
 
 ## chrooted directory
 # CHROOT_DIR="/path/to/chrooted/directory"
@@ -15,7 +15,7 @@
 ##
 ## If you want to setup a database with kamdbctl, you must at least specify
 ## this parameter.
-# DBENGINE=MYSQL
+DBENGINE=DBTEXT
 
 ## database host
 # DBHOST=localhost
@@ -27,7 +27,7 @@
 # DBNAME=kamailio
 
 ## database path used by dbtext, db_berkeley or sqlite
-# DB_PATH="/usr/local/etc/kamailio/dbtext"
+DB_PATH="/etc/kamailio/dbtext"
 
 ## database read/write user
 # DBRWUSER="kamailio"
@@ -132,10 +132,11 @@
 
 ## control engine: RPCFIFO
 ## - default RPCFIFO
-# CTLENGINE="RPCFIFO"
+CTLENGINE="RPCFIFO"
 
 ## path to FIFO file for engine RPCFIFO
-# RPCFIFOPATH="/run/kamailio/kamailio_rpc.fifo"
+RPCFIFOPATH="/run/kamailio/kamailio_rpc.fifo"
+#RPCFIFOPATH="/var/run/kamailio/kamailio_ctl"
 
 ## check ACL names; default on (1); off (0)
 # VERIFY_ACL=1
@@ -149,7 +150,7 @@
 # VERIFY_USER=1
 
 ## verbose - debug purposes - default '0'
-# VERBOSE=1
+VERBOSE=1
 
 ## do (1) or don't (0) store plaintext passwords
 ## in the subscriber table - default '1'
@@ -157,7 +158,7 @@
 
 ## Kamailio START Options
 ## PID file path - default is: /run/kamailio/kamailio.pid
-# PID_FILE=/run/kamailio/kamailio.pid
+PID_FILE=/run/kamailio/kamailio.pid
 
 ## Kamailio Startup Configuration File
 ## Default is: kamailio.cfg
