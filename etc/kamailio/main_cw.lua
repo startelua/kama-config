@@ -315,13 +315,7 @@ function ksr_route_withindlg(request_method)
 
 -- location 
   
-local ruser=KSR.kx.get_ruser()
 
-KSR.xlog.xerr("320  before iVINTE to WSS user"..ruser.."\n")
-if (KSR.regex.pcre_match(ruser,"^sip_user_[0-9][0-9][0-9][0-9]$"))>0 then
-        KSR.xlog.xerr("after  reg mach iVINTE to WSS user \n")
-        KSR.setbflag(FLT_TO_WS) 
-end 
 --[[
 if request_method == "INVITE"  and (KSR.regex.pcre_match(ruser,"^sip_user_[0-9][0-9][0-9][0-9]$"))>0 then  
     --and KSR.is_myself_ruri()  then  
@@ -454,6 +448,13 @@ dlg_manage();
 ]]--
  -- end 
 --KSR.log("info", "269 X-ao recive_forward V"..KSR.pv.get("$avp(dao)").." trunk " ..KSR.pv.gete("$avp(trunk)").. "\n")
+local ruser=KSR.kx.get_ruser()
+
+KSR.xlog.xerr("320  before iVINTE to WSS user"..ruser.."\n")
+if (KSR.regex.pcre_match(ruser,"^sip_user_[0-9][0-9][0-9][0-9]$"))>0 then
+        KSR.xlog.xerr("after  reg mach iVINTE to WSS user \n")
+        KSR.setbflag(FLT_TO_WS) 
+end 
 
 KSR.log("info", "463 INVITE before t set  \n")
 -- 
