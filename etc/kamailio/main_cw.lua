@@ -239,7 +239,7 @@ function ksr_route_request_process(request_method)
                         KSR.x.exit()
                     end    
                  end 
-                  KSR.setbflag(FLT_TO_WS) 
+                  KSR.setflag(FLT_TO_WS) 
                   KSR.xlog.xerr("iVINTE to WSS user  "..KSR.kx.get_furi().." dst "..KSR.pv.get("$ru").."\n")        
             end    
         if ksr_route_direction() < 0 then
@@ -453,7 +453,7 @@ local ruser=KSR.kx.get_ruser()
 KSR.xlog.xerr("320  before iVINTE to WSS user"..ruser.."\n")
 if (KSR.regex.pcre_match(ruser,"^sip_user_[0-9][0-9][0-9][0-9]$"))>0 then
         KSR.xlog.xerr("after  reg mach iVINTE to WSS user \n")
-        KSR.setbflag(FLT_TO_WS) 
+    --    KSR.setbflag(FLT_TO_WS) 
 end 
 
 KSR.log("info", "463 INVITE before t set  \n")
@@ -484,10 +484,6 @@ KSR.log("info", "463 INVITE before t set  \n")
 
         end
     end
-
-    if KSR.isflagset(FLT_TO_WS) then
-        KSR.xlog.xerr("Flag is set FLT_TO_WS \n")
-    end     
         if KSR.is_INVITE then
 
        KSR.nathelper.handle_ruri_alias() -- !!!!! 
@@ -564,7 +560,7 @@ function ksr_route_natmanage()
 if KSR.rr.check_route_param("rtp=ws") > 0 then
                 KSR.log("info", "!!!! check_route_param rtp=ws param  \n")
 	    end
-if KSR.isflagset(FLB_RTPWS) then
+if (KSR.isflagset(FLB_RTPWS)) then
                 KSR.log("info", "!!!! check_route_param rtp=ws flag  \n")
 	    end
 
@@ -635,25 +631,34 @@ end
 ------------------------------------------------------------------------------]]
 
 function ksr_onreply_manage_rtpengine()
-    KSR.log("info", "630  response contains sdp, answer to rtpengine \n")
-    local bye_rcvd = KSR.pv.get("$dlg_var(bye_rcvd)") or "false";
     
+    local bye_rcvd = KSR.pv.get("$dlg_var(bye_rcvd)") or "false";
+    KSR.log("info", "630  response contains sdp, answer to rtpengine bye_rcvd :"..bye_rcvd.." \n")
+
     if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
         KSR.log("info", "630  response contains sdp, answer to rtpengine \n")
 
         if KSR.rr.check_route_param("transport=ws") > 0 then
-                KSR.setbflag(FLB_RTPWS);
+                KSR.setflag(FLB_RTPWS);
                 KSR.log("info", "630 check_route_param ws \n")
-            rtpengine = "address-family=IP4  rtcp-mux-demux DTLS=off SDES-off ICE=remove RTP/AVP  full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";     
-        end         
+            rtpengine2 = "address-family=IP4  rtcp-mux-demux DTLS=off SDES-off ICE=remove RTP/AVP  full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";     
+        end 
+        if (KSR.isflagset(FLT_TO_WS)) then 
+                KSR.log("info", "630 check_route_param flag set  FLT_TO_WS \n")
+                rtpengine2 = "address-family=IP4  rtcp-mux-demux DTLS=off SDES-off ICE=remove RTP/AVP  full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
+        end  
+
+
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
            rtpengine = "ICE=remove RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
+            KSR.log("info", "630 check_route_param from Asterisk \n")
         end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
            rtpengine = "ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
+            KSR.log("info", "630 check_route_param from prov \n")
         end
 
-        if KSR.rtpengine.rtpengine_manage(rtpengine) > 0 then
+        if KSR.rtpengine.rtpengine_manage(rtpengine2) > 0 then
             KSR.log("info", "received success reply for rtpengine answer from instance"..rtpengine.." \n")
         else
             KSR.log("err", "received failure reply for rtpengine answer from instance \n")
@@ -844,32 +849,23 @@ end
 
 function ksr_route_rtp_engine(req_method)
     if req_method == "INVITE" then 
-        if KSR.isflagset(FLT_TO_WS) then
-        KSR.xlog.xerr("Flag is set FLT_TO_WS  in retpengie   \n")
-    end    
-
           KSR.log("info", "834 received success reply for rtpengine answer from instance ksr_route_rtp_engine \n")
-       -- if (KSR.isflagset(FLT_TO_WS)) then
-            local rtp_option="via-branch=auto record-call=yes  metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().."" 
-            rtpengine2 = rtp_option.."replace-origin replace-session-connection via-branch=extra address-family=IP4 rtcp-mux-offer generate-mid DTLS=passive SDES-off ICE=force RTP/SAVPF direction=priv direction=pub"
-       -- end 
-
+       
         if (KSR.isflagset(FLT_FROM_ASTERISK)) then
-	    local rtp_option="via-branch=auto record-call=yes  metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser()..""    
-    	    rtpengine = rtp_option.." ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
+	       local rtp_option="via-branch=auto record-call=yes  metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser()..""    
+    	   rtpengine = rtp_option.." ICE=remove RTP/AVP full-rtcp-attribute direction=priv direction=pub replace-origin replace-session-connection";
         end
         if (KSR.isflagset(FLT_FROM_PROVIDER)) then
-	    --[[if (KSR.isflagset(FLB_RTPWS)) then 
-	        KSR.warn("ds WSS RTPENGINE  from faild next \n")
-		local rtp_option="via-branch=auto record-call=yes   metadata=from:"..KSR.kx.get_tuser().."|to:"..KSR.kx.get_fuser()
-        	rtpengine =rtp_option.."rtcp-mux-demux DTLS=off SDES-off ICE=remove RTP/AVP  direction=pub direction=priv replace-origin replace-session-connection";
-	    else ]]-- 
-		  local rtp_option="via-branch=auto record-call=yes   metadata=from:"..KSR.kx.get_tuser().."|to:"..KSR.kx.get_fuser()
-    	          rtpengine =rtp_option.." ICE=remove codec-strip=all codec-offer=PCMA   transcode=telephone-event always-transcode RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";
-	    --end
+		      local rtp_option="via-branch=auto record-call=yes   metadata=from:"..KSR.kx.get_tuser().."|to:"..KSR.kx.get_fuser()
+    	       rtpengine =rtp_option.." ICE=remove codec-strip=all codec-offer=PCMA   transcode=telephone-event always-transcode RTP/AVP full-rtcp-attribute direction=pub direction=priv replace-origin replace-session-connection";               
         end 
-    
-       if KSR.rtpengine.rtpengine_manage(rtpengine2) > 0 then
+        if (KSR.isflagset(FLT_TO_WS)) then
+                KSR.xlog.xerr("834 Flag is set FLT_TO_WS  in retpengie   \n")
+                 local rtp_option="via-branch=auto record-call=yes  metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().."" 
+                 rtpengine = rtp_option.."replace-origin replace-session-connection via-branch=extra address-family=IP4 rtcp-mux-offer generate-mid DTLS=passive SDES-off ICE=force RTP/SAVPF direction=priv direction=pub"
+        end 
+
+       if KSR.rtpengine.rtpengine_manage(rtpengine) > 0 then
             KSR.log("info", "received success reply for rtpengine answer from instance ksr_route_rtp_engine \n")
 -- Проверка на передачу rtp premedia 
 	    if (KSR.isflagset(FLT_FROM_ASTERISK)) and KSR.pv.get("$avp(dao)") ==1 then
