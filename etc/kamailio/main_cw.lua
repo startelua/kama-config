@@ -192,7 +192,8 @@ end
     if req not INVITE then it will reject the request with 501 , else create the transaction
 -----------------------------------------------------------------------------]]
 function ksr_route_request_process(request_method)
-
+    KSR.pv.sets("$xavu(_tps_=>a_contact)", "192.168.0.1")
+    KSR.pv.sets("$xavu(_tps_=>b_contact)", "192.168.0.1")
     --remove pre loaded request route headers
     KSR.hdr.remove("Route");
 
@@ -222,7 +223,7 @@ function ksr_route_request_process(request_method)
         end
 
             local ruser=KSR.kx.get_ruser()
-
+          
             if  (KSR.regex.pcre_match(ruser,"^sip_user_[0-9][0-9][0-9][0-9]$"))>0 then  
                 --and KSR.is_myself_ruri()  then  
                 local sipuser = ruser..'@cw-kam1.skeef.su'
@@ -313,57 +314,30 @@ function ksr_route_withindlg(request_method)
         end
     end 
 
--- location 
-  
-
---[[
-if request_method == "INVITE"  and (KSR.regex.pcre_match(ruser,"^sip_user_[0-9][0-9][0-9][0-9]$"))>0 then  
-    --and KSR.is_myself_ruri()  then  
-    local sipuser
-    sipuser = ruser..'@cw-kam1.skeef.su'
-    KSR.xlog.xerr("iVINTE to WSS user"..sipuser.."\n")
-
-    local state = KSR.registrar.lookup("location")
-    if state<0 then
-        KSR.tm.t_newtran()
-            if state==-1 or state==-3 then
-                KSR.sl.send_reply(404, "Not Found")
-                KSR.x.exit()
-            elseif state==-2 then
-                KSR.sl.send_reply(405, "Method Not Allowed")
-                KSR.x.exit()
-            end
-        end 
-        KSR.setbflag(FLT_TO_WS)   
-        ksr_route_relay(request_method);
-        KSR.x.exit()
-end 
-]]--
-
 
     -- if loose_route just relay , if ACK then Natmanage and relay
     if KSR.rr.loose_route() > 0 then
-        KSR.log("info", "in-dialog request,loose_route \n");
+        KSR.log("info", "328 in-dialog request,loose_route \n");
         ksr_route_dlguri();
-        if request_method == "ACK" then 
-           ksr_route_natmanage();
-        end
+        --if request_method == "ACK" then 
+        --   ksr_route_natmanage();
+       -- end
         ksr_route_relay(request_method);
         KSR.x.exit()
     end
 
-    KSR.log("info", "in-dialog request,not loose_route \n")
+    KSR.log("info", "328 in-dialog request,not loose_route \n")
     if request_method == "ACK" then
         -- Relay ACK if it matches with a transaction ... Else ignore and discard
-        if KSR.tm.t_check_trans() > 0 then
-            -- no loose-route, but stateful ACK; must be an ACK after a 487 or e.g. 404 from upstream server
-            KSR.log("info", "in-dialog request,not loose_route with transaction - relaying \n")
+        --if KSR.tm.t_check_trans() > 0 then
+        --    -- no loose-route, but stateful ACK; must be an ACK after a 487 or e.g. 404 from upstream server
+        --    KSR.log("info", "328 in-dialog request,not loose_route with transaction - relaying \n")
             ksr_route_relay(request_method);
-        end
-        KSR.log("err", "in-dialog request,not loose_route without transaction,exit the  \n")
+       -- end
+        KSR.log("err", "328 in-dialog request,not loose_route without transaction,exit the  \n")
         KSR.x.exit()
     end
-    KSR.log("err", "received invalid sip packet,sending 404 \n");
+    KSR.log("err", "328 received invalid sip packet,sending 404 \n");
     KSR.sl.sl_send_reply(404, "Not here");
     KSR.x.exit()
 end
@@ -611,6 +585,10 @@ function ksr_onreply_manage()
     if is_downstream == "true" then
         local to_uri = KSR.pv.get("$dlg_var(to_uri)") or KSR.pv.get("$avp(to_uri)")
         KSR.pv.sets("$tu", to_uri);
+    end
+    if KSR.nathelper.nat_uac_test(64) > 0 then
+            KSR.log("info", "589 adding contact alias  WSS\n")
+            KSR.nathelper.add_contact_alias()
     end
 
     if response_code > 100 and response_code < 299 then
@@ -862,7 +840,7 @@ function ksr_route_rtp_engine(req_method)
         if (KSR.isflagset(FLT_TO_WS)) then
                 KSR.xlog.xerr("834 Flag is set FLT_TO_WS  in retpengie   \n")
                  local rtp_option="via-branch=auto record-call=yes  metadata=from:"..KSR.kx.get_fuser().."|to:"..KSR.kx.get_tuser().."" 
-                 rtpengine = rtp_option.."replace-origin replace-session-connection via-branch=extra address-family=IP4 rtcp-mux-offer generate-mid DTLS=passive SDES-off ICE=force RTP/SAVPF direction=priv direction=pub"
+                 rtpengine = rtp_option.." replace-origin replace-session-connection via-branch=extra address-family=IP4 rtcp-mux-offer generate-mid DTLS=passive SDES-off ICE=force RTP/SAVPF direction=priv direction=pub"
         end 
 
        if KSR.rtpengine.rtpengine_manage(rtpengine) > 0 then
@@ -927,30 +905,32 @@ function ksr_xhttp_event(evname)
     xhttp_prom_root=KSR.pv.get("$(hu{s.substr,0,8})")
             KSR.log("err", "xhttp executing rpc event " ..xhttp_prom_root.." metod "..rpc_method.."\n")
 
-  if xhttp_prom_root =="/XMLRPC" then
-    if ((rpc_method == "POST" or rpc_method == "GET")) then
-        if KSR.xmlrpc.dispatch_rpc() < 0 then
-            KSR.log("err", "error while executing xmlrpc event" .. "\n")
-	else 
-	    KSR.xhttp.xhttp_reply("200",  "reason", "ctype","ok");
+    if xhttp_prom_root =="/XMLRPC" then
+        if ((rpc_method == "POST" or rpc_method == "GET")) then
+            if KSR.xmlrpc.dispatch_rpc() < 0 then
+                KSR.log("err", "error while executing xmlrpc event" .. "\n")
+	        else 
+	           KSR.xhttp.xhttp_reply("200",  "reason", "ctype","ok");
+            end
+--	        KSR.xhttp.xhttp_reply("200",  "reason", "ctype","ok");
+	        KSR.xhttp.xhttp_reply(200, "OK", "application/json", "")
+--	        xhttp_reply("200", "OK", "" , "");
+	        KSR.x.exit()
         end
---	KSR.xhttp.xhttp_reply("200",  "reason", "ctype","ok");
-	KSR.xhttp.xhttp_reply(200, "OK", "application/json", "")
---	xhttp_reply("200", "OK", "" , "");
-	KSR.x.exit()
-      end
-  end
+    end
   if xhttp_prom_root =="/RPC" then
 --    if ((rpc_method == "POST" or rpc_method == "GET")) then
 	    hu=KSR.pv.get("$hu")
-            KSR.log("err", "RPC while executing Jsonrpc event" ..hu.. "\n")
-        if KSR.josnrpc.dispatch_rpc() < 0 then
-            KSR.log("err", "error while executing Jsonrpc event" .. "\n")
-	else 
---	    KSR.xhttp.xhttp_reply("200",  "reason", "ctype","ok");
-	    KSR.xhttp.xhttp_reply(200, "OK", "application/json", "")
-	    KSR.x.exit()
-        end
+        KSR.log("err", "RPC while executing Jsonrpc event" ..hu.. "\n")
+        KSR.jsonrpcs.dispatch()
+    --if KSR.jsonrpcs.dispatch_rpc() < 0 then
+    --    if KSR.jsonrpc_dispatch()< 0 then
+    --        KSR.log("err", "error while executing Jsonrpc event" .. "\n")
+	--else 
+--	     KSR.xhttp.xhttp_reply("200",  "reason", "ctype","ok");
+	       KSR.xhttp.xhttp_reply(200, "OK", "application/json", "")
+	       KSR.x.exit()
+      ---  end
 --      end
   end
 
