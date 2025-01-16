@@ -23,15 +23,13 @@ function ksr_request_route()
  -- start duplicate the SIP message here
         KSR.siptrace.sip_trace();
         KSR.setflag(22);
-
     local request_method = KSR.pv.get("$rm") or "";
     local user_agent = KSR.pv.get("$ua") or "";
     local protocol = KSR.pv.get("$pr")
-
     KSR.log("info", " KSR_request_route request, method " .. request_method .. " user_agent " .. user_agent .." proto "..protocol.."\n");
 
     -- per request initial checks
-    ksr_route_reqinit(user_agent);
+    ksr_route_reqinit();
 
     -- OPTIONS processing
     ksr_route_options_process(request_method);
@@ -114,8 +112,6 @@ function ksr_register(request_method)
     end ]]--
     if KSR.auth_db.auth_check(KSR.kx.gete_fhost(), "subscriber", 1)<0 then
 			        KSR.log("err", "AUth ok "..KSR.kx.gete_fhost())
-			KSR.force_rport()
-			KSR.nathelper.fix_nated_register()
 			KSR.registrar.save("location",1)
                         KSR.auth.auth_challenge(KSR.kx.gete_fhost(), 0);
                         KSR.x.exit();
@@ -137,7 +133,7 @@ end
 
 -- Per SIP request initial checks
 --------------------------------------------
-function ksr_route_reqinit(user_agent)
+function ksr_route_reqinit()
 
     -- Max forwards Check
     local max_forward = 10
@@ -192,8 +188,6 @@ end
     if req not INVITE then it will reject the request with 501 , else create the transaction
 -----------------------------------------------------------------------------]]
 function ksr_route_request_process(request_method)
-    KSR.pv.sets("$xavu(_tps_=>a_contact)", "192.168.0.1")
-    KSR.pv.sets("$xavu(_tps_=>b_contact)", "192.168.0.1")
     --remove pre loaded request route headers
     KSR.hdr.remove("Route");
 
@@ -241,7 +235,8 @@ function ksr_route_request_process(request_method)
                     end    
                  end 
                   KSR.setflag(FLT_TO_WS) 
-                  KSR.xlog.xerr("iVINTE to WSS user  "..KSR.kx.get_furi().." dst "..KSR.pv.get("$ru").."\n")        
+                  KSR.xlog.xerr("iVINTE to WSS user  "..KSR.kx.get_furi().." dst "..KSR.pv.get("$ru").."\n")
+                          
             end    
         if ksr_route_direction() < 0 then
         -- Nasts disdcher 
@@ -319,9 +314,9 @@ function ksr_route_withindlg(request_method)
     if KSR.rr.loose_route() > 0 then
         KSR.log("info", "328 in-dialog request,loose_route \n");
         ksr_route_dlguri();
-        --if request_method == "ACK" then 
-        --   ksr_route_natmanage();
-       -- end
+        if request_method == "ACK" then 
+           ksr_route_natmanage();
+        end
         ksr_route_relay(request_method);
         KSR.x.exit()
     end
@@ -329,11 +324,11 @@ function ksr_route_withindlg(request_method)
     KSR.log("info", "328 in-dialog request,not loose_route \n")
     if request_method == "ACK" then
         -- Relay ACK if it matches with a transaction ... Else ignore and discard
-        --if KSR.tm.t_check_trans() > 0 then
-        --    -- no loose-route, but stateful ACK; must be an ACK after a 487 or e.g. 404 from upstream server
-        --    KSR.log("info", "328 in-dialog request,not loose_route with transaction - relaying \n")
+        if KSR.tm.t_check_trans() > 0 then
+            -- no loose-route, but stateful ACK; must be an ACK after a 487 or e.g. 404 from upstream server
+            KSR.log("info", "328 in-dialog request,not loose_route with transaction - relaying \n")
             ksr_route_relay(request_method);
-       -- end
+        end
         KSR.log("err", "328 in-dialog request,not loose_route without transaction,exit the  \n")
         KSR.x.exit()
     end
@@ -360,95 +355,45 @@ end
    Desc: adding the reply_route,failure_route,branch_route to request. relay the request.
 ------------------------------------------------------------------------------]]
 
+function ksr_onreply_manage()
+    KSR.info("incoming reply\n");
+    if KSR.nathelper.nat_uac_test(64) > 0 then
+           KSR.log("info", "589 adding contact alias  WSS\n")
+           KSR.nathelper.add_contact_alias()
+    end
+    return 1;
+end
+
+
+
 function ksr_route_relay(req_method)
-    
+
     local request_uri = KSR.pv.get("$ru") or ""
     local dest_uri = KSR.pv.get("$du") or ""
-    KSR.log("info", "relaying the message with request uri - " .. request_uri .. " destination uri - " .. dest_uri .. "\n");
 
     local bye_rcvd = KSR.pv.get("$dlg_var(bye_rcvd)") or "false";
 
+    if KSR.tm.t_is_set("branch_route") < 0 then
+      KSR.tm.t_on_branch("ksr_branch_manage")
+    end
+    if KSR.tm.t_is_set("failure_route") < 0 and req_method == "INVITE" then
+      KSR.tm.t_on_failure("ksr_failure_manage")
+    end
+
     if req_method == "BYE" then
-        if KSR.tm.t_is_set("branch_route") < 0 then
+      if KSR.tm.t_is_set("branch_route") < 0 then
             KSR.tm.t_on_branch("ksr_branch_manage");
-        end
-        KSR.log("info", "sending delete command to rtpengine \n")
---[[	setflag(FLT_ACC)
-uri==myself)
-xlog("L_DBG", "=====BYE $ru from $fu $si:$sp to $du=====\n");
-dlg_manage();
-
-
- if (is_method("NOTIFY")) {
-                # Add Record-Route for in -dialog NOTIFY as per RFC 6665.         
-                record_route();
-            }
-
-]]-- 
---[[ move ti INVITE route 
-    elseif req_method == "INVITE" or req_method == "UPDATE" then
-  -- Провепка возможности форвардинга и записи
-    local dao = KSR.hdr.gete("X-ao");
-    local trunk=KSR.hdr.gete("X-trunk");
-    local rec=KSR.hdr.gete("X-rec");
-    local rtp=KSR.hdr.gete("X-rtp");
-       KSR.log("info", "X-ao recive_forward V "..dao.." trunk " ..trunk.." Rec "..rec.. "\n")
-    if dao~="" then 
-        KSR.pv.seti("$avp(dao)",dao)
-        KSR.hdr.remove('X-ao')
-    else 
-	KSR.pv.seti("$avp(dao)",0)
       end
-    if trunk~="" then
-        KSR.pv.sets("avp(trunk)",trunk)
-        KSR.hdr.remove('X-trunk')
-    else 
-        KSR.pv.sets("avp(trunk)",0)
-      end
-     if rec~="" then 
-	KSR.pv.seti("avp(rec)",rec)
-        KSR.hdr.remove('X-rec')
-    else 
-	KSR.pv.seti("avp(rec)",1)
-    end
-     if rtp~="" then 
-	KSR.pv.seti("$avp(setid)",rtp)
-        KSR.hdr.remove('X-rtp')
-    else 
-	KSR.pv.seti("$avp(setid)"1)
-    end
+      KSR.log("info", "sending delete command to rtpengine \n")
 
-	KSR.pv.seti("$avp(setid)",1)
-]]--
- -- end 
---KSR.log("info", "269 X-ao recive_forward V"..KSR.pv.get("$avp(dao)").." trunk " ..KSR.pv.gete("$avp(trunk)").. "\n")
-local ruser=KSR.kx.get_ruser()
+        local ruser=KSR.kx.get_ruser()
 
-KSR.xlog.xerr("320  before iVINTE to WSS user"..ruser.."\n")
-if (KSR.regex.pcre_match(ruser,"^sip_user_[0-9][0-9][0-9][0-9]$"))>0 then
+      if (KSR.regex.pcre_match(ruser,"^sip_user_[0-9][0-9][0-9][0-9]$"))>0 then
         KSR.xlog.xerr("after  reg mach iVINTE to WSS user \n")
-    --    KSR.setbflag(FLT_TO_WS) 
-end 
+        KSR.setbflag(FLT_TO_WS)
+      end
 
-KSR.log("info", "463 INVITE before t set  \n")
--- 
-        if KSR.tm.t_is_set("branch_route") < 0 then
-            KSR.tm.t_on_branch("ksr_branch_manage")
-        end
-
-        if KSR.tm.t_is_set("onreply_route") < 0 then
-           KSR.tm.t_on_reply("ksr_onreply_manage_rtpengine");
-        end
-
-        if KSR.tm.t_is_set("failure_route") < 0 and req_method == "INVITE" then
-            KSR.tm.t_on_failure("ksr_failure_manage")
-        end
-
-        if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
-            KSR.log("info", "method contains sdp, creating offer to rtpengine \n")
-            KSR.log("info", "479 INVITE before go to rtpengine witch sdp  \n")
-            ksr_route_rtp_engine(req_method);
-        end
+      KSR.log("info", "463 INVITE before t set  \n")
 
     elseif req_method == "ACK" then
         if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
@@ -460,32 +405,41 @@ KSR.log("info", "463 INVITE before t set  \n")
     end
         if KSR.is_INVITE then
 
-       KSR.nathelper.handle_ruri_alias() -- !!!!! 
-        ksr_route_rtp_engine(req_method)
-     end 
-
-    KSR.tm.t_relay()
+       --KSR.nathelper.handle_ruri_alias() -- !!!!!
+       ksr_route_rtp_engine(req_method)
+     end
+    KSR.log("info", "WE ARE HERREEE \n")
+    if KSR.is_method_in("ISU") then
+        if KSR.tm.t_is_set("onreply_route") < 0 then
+      KSR.xlog.xerr("onreply_route SETonreply_route SET \n")
+          KSR.tm.t_on_reply("ksr_onreply_manage_rtpengine");
+      end
+    end
+    if KSR.tm.t_is_set("onreply_route") < 0 then
+        KSR.xlog.xerr("NOT SET \n")
+    end
+    if KSR.tm.t_relay() < 0 then
+        KSR.sl.send_reply(500, "Server error")
+    end
     KSR.x.exit()
 end
-
-
 --[[--------------------------------------------------------------------------
    Name: ksr_route_natdetect()
    Desc: caller NAT detection and add contact alias
 ------------------------------------------------------------------------------]]
 function ksr_route_natdetect()
     KSR.force_rport()
-    if KSR.nathelper.nat_uac_test(19) > 0 then
-        KSR.log("info", "request is behind nat \n")
-        if KSR.is_REGISTER() then
-            KSR.nathelper.fix_nated_register();
-        end     
-        if KSR.siputils.is_first_hop() > 0 then
-            KSR.log("info", "adding contact alias \n")
-            KSR.nathelper.set_contact_alias()
-        end
-        KSR.setflag(FLT_NATS);
-    end
+--    if KSR.nathelper.nat_uac_test(19) > 0 then
+--       KSR.log("info", "request is behind nat \n")
+--        if KSR.is_REGISTER() then
+--           KSR.nathelper.fix_nated_register();
+--        end     
+--        if KSR.siputils.is_first_hop() > 0 then
+--            KSR.log("info", "adding contact alias \n")
+--            KSR.nathelper.set_contact_alias()
+--        end
+--        KSR.setflag(FLT_NATS);
+--    end
 
     if KSR.nathelper.nat_uac_test(64) > 0 then
         KSR.log("info", "request is behind nat WSS \n")
@@ -566,42 +520,19 @@ end
    Name: ksr_branch_manage()
    Desc: managing outgoing branch
 ------------------------------------------------------------------------------]]
-function ksr_branch_manage()
-    KSR.log("dbg", "new branch [" .. KSR.pv.get("$T_branch_idx") .. "] to " .. KSR.pv.get("$ru") .. "\n");
-    ksr_route_natmanage();
-    return 1;
+
+
+
+function ksr_reply_route()
+	KSR.info("===== response - from kamailio lua script\n");
+	return 1;
 end
+
 
 --[[--------------------------------------------------------------------------
    Name: ksr_onreply_manage()
    Desc: managing incoming response for the request
 ------------------------------------------------------------------------------]]
-function ksr_onreply_manage()
-    local response_code = KSR.pv.get("$rs")
-    KSR.log("info", "incoming reply with response code " .. tostring(response_code) .. "\n");
-    local current_time = KSR.pv.get("$TS")
-
-    local is_downstream = KSR.pv.get("$avp(is_downstream)") or "false";
-    if is_downstream == "true" then
-        local to_uri = KSR.pv.get("$dlg_var(to_uri)") or KSR.pv.get("$avp(to_uri)")
-        KSR.pv.sets("$tu", to_uri);
-    end
-    if KSR.nathelper.nat_uac_test(64) > 0 then
-            KSR.log("info", "589 adding contact alias  WSS\n")
-            KSR.nathelper.add_contact_alias()
-    end
-
-    if response_code > 100 and response_code < 299 then
-        if response_code == 180 or response_code == 183 then
-            KSR.log("info", "incoming call_ring_time - " .. current_time)
-        elseif response_code == 200 then
-            KSR.log("info", "incoming call_answer_time - " .. current_time)
-        end
-        ksr_route_natmanage();
-    end
-    return 1;
-end
-
 --[[--------------------------------------------------------------------------
    Name: ksr_onreply_manage_answer()
    Desc: managing incoming response for the request and sending answer command to
@@ -609,7 +540,6 @@ end
 ------------------------------------------------------------------------------]]
 
 function ksr_onreply_manage_rtpengine()
-    
     local bye_rcvd = KSR.pv.get("$dlg_var(bye_rcvd)") or "false";
     KSR.log("info", "630  response contains sdp, answer to rtpengine bye_rcvd :"..bye_rcvd.." \n")
 
@@ -642,7 +572,7 @@ function ksr_onreply_manage_rtpengine()
             KSR.log("err", "received failure reply for rtpengine answer from instance \n")
         end
     end
-    ksr_onreply_manage()
+    ksr_onreply_manage();
     return 1;
 end
 
@@ -756,7 +686,7 @@ function ksr_nats_forward()
  KSR.pv.sets('$du', dst)
 	KSR.hdr.append('X-DOMEN-2: '..KSR.pv.gete("$fd")..'\r\n')
 	KSR.hdr.append('X-kam : ' ..getHostname()..'\r\n')
-    KSR.tm.t_relay() 
+--    KSR.tm.t_relay() 
 end
 
 
@@ -818,7 +748,7 @@ function ksr_failure_dispacher()
 	KSR.dispatcher.ds_next_dst()
     	KSR.warn("ds  Dispatcher from faild next"..KSR.pv.get("$du"))
 	KSR.tm.t_on_failure("ksr_failure_dispacher")
-	KSR.tm.t_relay()
+	KSR.tm.t_relay("ksr_onreply_manage")
 	KSR.x.exit()
     end
 end
@@ -860,6 +790,8 @@ function ksr_route_rtp_engine(req_method)
     if req_method == "ACK" or req_method == "BYE"  then
         KSR.rtpengine.rtpengine_manage()
     end
+
+   return 1;
 
 end
 --[[---------------- EVENT ]]--
@@ -975,7 +907,7 @@ end
 ------------------------------------------------------------------------------]]
 
 function ksr_nats_event(evname)
-    KSR.xlog.info("===== nats module received event: "..evname ..", data:"..KSR.pv.gete('$natsData').."\n");
+--    KSR.xlog.info("===== nats module received event: "..evname ..", data:"..KSR.pv.gete('$natsData').."\n");
     if (evname == "nats:siptmx_be") then
         KSR.warn("get_nats. "..KSR.pv.gete('$natsData').."\n" )
         local key= KSR.pv.gete('$(natsData{json.parse, key})')
