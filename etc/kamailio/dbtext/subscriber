@@ -1,5 +1,6 @@
 id(int,auto) username(string) domain(string) password(string) ha1(string) ha1b(string)
-1:12345:cw-kam1.skeef.ua:54321:e448a16d5bab5d2edd4799e27f41a969:cf2303c5257ef5c9af63f994a54afc8c
-2:xxx:cw-kam1.skeef.ua:xxx:9d4ba3febac1d7385ecf417ecd9bbbe5:9cbf18abc867aad6a63a93d132090669
+1:12345:cw-kam1.skeef.su:54321:e448a16d5bab5d2edd4799e27f41a969:cf2303c5257ef5c9af63f994a54afc8c
+2:xxx:cw-kam1.skeef.su:xxx:9d4ba3febac1d7385ecf417ecd9bbbe5:9cbf18abc867aad6a63a93d132090669
 3:sip_user_0001:cw-kam1.skeef.su:xxx:5079e89ca242458317bd4c2725b74c5e:e3fa215a665ae6e93b531323bfed9c6c
 4:sip_user_0002:cw-kam1.skef.su:xxx:6113e0370c4fed45ab02585fcae9cc5a:729258b41f2286757d1170c8045221a1
+5:sip_user_1001:cw-kam1.skeef.su:123:82b13b68c50780b2e07c50723aa67f0a:63b594808053c926d935a157da12c31c

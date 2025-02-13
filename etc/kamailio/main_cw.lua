@@ -43,6 +43,11 @@ function ksr_request_route()
      --protocol=="wss") then 
             KSR.log("info", " KSR register, method " .. request_method .. " user_agent " .. user_agent .." proto WSS\n");
             ksr_register(request_method);
+    elseif (KSR.is_REGISTER() and not KSR.is_myself_ruri()) then 
+		KSR.xlog.xerr("in ast register")
+		KSR.hdr.remove("Route");
+		KSR.path.add_path()
+		KSR.pv.sets('$du', "sip:77.105.174.188:5060");
     elseif (KSR.is_INVITE()) then 
 	    ksr_sip_to_wss(request_method);
     end
@@ -154,8 +159,8 @@ end
 ------------------------------------------
 function ksr_route_options_process(request_method)
     if request_method == "OPTIONS"
---            and KSR.is_myself_ruri() 
---            and KSR.pv.is_null("$rU") then
+            and KSR.is_myself_ruri() 
+            and KSR.pv.is_null("$rU") then
         KSR.log("info", "sending keepalive response 200 \n")
         KSR.sl.sl_send_reply(200, "Keepalive")
         KSR.x.exit()
@@ -198,7 +203,15 @@ function ksr_route_request_process(request_method)
             KSR.tmx.t_continue(id_index, id_label, "service_callback")
         end
 
+evs_s=string.format('{\n "event":"sip-routing",\n"tindex" :%s,"tlabel":%s,"caller":%s}"',KSR.pv.gete("$T(id_index)"),tostring( KSR.pv.gete("$T(id_index)")), KSR.kx.get_tuser())
+KSR.xlog.xerr(evs_s)
+--KSR.xlog.xerr('{\n "event":"sip-routing",\n "tindex":'..KSR.pv.get("$T(id_index)")..', "tlabel":'..KSR.pv.get("$T(id_index)")KSR.pv.get("$T(id_label)"))
+--..',"caller":'.. KSR.pv.get("$fU")..', "callee":'..KSR.pv.get("$rU")..'\n}')
+--evapi_async_relay("{\n \"event\": \"sip-routing\",\n"" \"tindex\": KSR.pv.get("$T(id_index)"), \"tlabel\":KSR.pv.get("$T(id_label)"),"" \"caller\": KSR.pv.get("\$fU\"), \"callee\": \KSR.pv.get("\$rU\")\n}")
+--    KSR.evapi.evapi_relay("{ \"event\": \"test\",\n \"data\": { \"fU\": \"fU\") }\n}");
+KSR.evapi.relay("{ \"event\": \"test\",\n \"data\": { KSR.pv.get(\"$fU\"): KSR.pv.get(\"$fU\") }\n}");
 
+--    KSR.evapi.evapi_relay("vvvv");
         if ksr_route_direction() < 0 then
         -- Nasts disdcher 
         --  ksr_nats_disp()
@@ -278,15 +291,6 @@ function ksr_route_withindlg(request_method)
         KSR.log("info", "in-dialog request,loose_route \n");
         ksr_route_dlguri();
         if request_method == "ACK" then 
--- Проверка на передачу rtp 
---	    if (KSR.isflagset(FLT_FROM_ASTERISK)) and 
---		if KSR.pv.get("$avp(dao)") ==1 then
---		KSR.log("info", "204 X-ao recive_forward V "..KSR.pv.get("$avp(dao)").." trunk " ..KSR.pv.gete("$avp(trunk)").. "\n")
---		KSR.route("rt_forward_stop")
---	    elseif (KSR.isflagset(FLT_FROM_ASTERISK)) and KSR.pv.get("$avp(dao)") ==1 then
---		KSR.log("info", "207 X-ao recive_forward V "..KSR.pv.get("$avp(dao)").." rec "..KSR.pv.get("$avp(dao)").." trunk " ..KSR.pv.gete("$avp(trunk)").. "\n")
---		KSR.rtpengine.start_recording();
---	    end 
            ksr_route_natmanage();
         end
         ksr_route_relay(request_method);
@@ -463,26 +467,45 @@ end
 function ksr_route_natmanage() 
 	KSR.xlog.xerr("ksr_route_natmanage")
     if KSR.siputils.is_request() > 0 then
+	KSR.xlog.xerr("ksr_route_natmanage is tag")
+
         if KSR.siputils.has_totag() > 0 then
             if KSR.rr.check_route_param("nat=yes") > 0 then
+                KSR.xlog.xerr("ksr_route_natmanage is tag trnasport nat=yes ")
                 KSR.setbflag(FLB_NATB);
-            end
+            elseif KSR.rr.check_route_param("transport=wss") > 0 then
+                KSR.setbflag(FLB_NATB);
+		        KSR.xlog.xerr("ksr_route_natmanage is tag trnasport wss ")
+	       end
         end
-    end
-   if (KSR.isflagset(FLT_TO_WS)) then 
-    	KSR.nathelper.handle_ruri_alias()
-  end 
-    if (not (KSR.isflagset(FLT_NATS) or KSR.isbflagset(FLB_NATB))) then
+    
+            if (KSR.isflagset(FLT_TO_WS)) then 
+                --     if  KSR.is_WSX() then 
+	           KSR.xlog.xerr("ksr_route_natmanage is tag set flag")
+                --            KSR.nathelper.set_contact_alias()
+    	       KSR.nathelper.handle_ruri_alias()
+                --transport=wss KSR.is_WSX()
+            end 
+          if    KSR.is_WSX() then 
+                KSR.xlog.xerr("ksr_route_natmanage is tag is_wss")
+          end       
+        end 
+    if (not (KSR.isflagset(FLT_NATS) or KSR.isbflagset(FLB_NATB) or KSR.isflagset(FLT_TO_WS) )) then
+        KSR.xlog.xerr("ksr_route_natmanage ret is flag nat not set ")
         return 1;
     end
 
     if KSR.siputils.is_request() > 0 then
         if not KSR.siputils.has_totag() then
+	KSR.xlog.xerr("ksr_route_natmanage no tag")
+
             if KSR.tmx.t_is_branch_route() > 0 then
                 KSR.rr.add_rr_param(";nat=yes")
             end
         end
     elseif KSR.siputils.is_reply() > 0 then
+	KSR.xlog.xerr("ksr_route_natmanage is replay")
+
         if KSR.isbflagset(FLB_NATB) then
             KSR.nathelper.set_contact_alias()
         end
@@ -521,6 +544,11 @@ function ksr_onreply_manage()
         elseif response_code == 200 then
             KSR.log("info", "incoming call_answer_time - " .. current_time)
         end
+    if (KSR.is_WSX()) then
+     KSR.xlog.xerr("ksr_onreply_manage test is_wsx")
+        KSR.setflag(FLT_TO_WS) 
+        KSR.nathelper.set_contact_alias()
+    end
         ksr_route_natmanage();
     end
     return 1;
@@ -533,7 +561,7 @@ end
 ------------------------------------------------------------------------------]]
 
 function ksr_onreply_manage_rtpengine()
-   -- KSR.xlog.xerr("ksr_onreply_manage_rtpengine()")
+    KSR.xlog.xerr("ksr_onreply_manage_rtpengine()")
     local bye_rcvd = KSR.pv.get("$dlg_var(bye_rcvd)") or "false";
     if bye_rcvd ~= "true" and KSR.textops.has_body_type("application/sdp") > 0 then
         KSR.log("info", "response contains sdp, answer to rtpengine \n")
@@ -992,5 +1020,29 @@ function ksr_dialog_event(evname)
 end
 
 
+--___________________________________________
+function ksr_uac_event(evname)
+        KSR.xlog("L_INFO","[UAC:REPLY] $tU received reply code is:"..KST.pv.gete('$uac_req(evcode)').."\n");
+end 
+--___________________________________________
+function ksr_websocket_event(evname)
+    if evname=="websocket:closed" then 
+    --[[     $var(shtdec) = $shtdec(websockets=>$si::count);
+    if ($sht(websockets=>$si::count) < 1) {
+        xlog("L_INFO", "websocket|log|$si:$sp closed last websocket to that IP\n");
+        sht_rm_name_re("websockets=>$(si{re.subst,/\\./\\\\./g})::.*");
+    } else {
+        xlog("L_INFO", "websocket|log|closed websocket from $si:$sp, $var(count) remaining from that IP\n");
+    } ]]--
+--    KSR.xlog("L_INFO", "websocket|log|closed websocket from $si:$sp, $var(count) remaining from that IP\n");
+end 
+end
 
-
+-- event callback function implemented in Lua
+function ksr_evapi_event(evname)
+    KSR.info("===== evapi module triggered event: " .. evname .. "\n");
+    if (evname=="evapi:message-received") then 
+    KSR.xlog.xerr("evapi resive mes "..KSR.pv.gete("$evapi(msg)"))
+    end 
+    return 1;
+end

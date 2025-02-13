@@ -5,7 +5,7 @@
 ## will use their internal default values.
 
 ## the SIP domain
-SIP_DOMAIN=cw-kam1.skeef.ua
+SIP_DOMAIN=cw-kam1.skeef.su
 
 ## chrooted directory
 # CHROOT_DIR="/path/to/chrooted/directory"
